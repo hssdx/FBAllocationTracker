@@ -18,6 +18,10 @@
 
 #if _INTERNAL_FBAT_ENABLED
 
+#include <map>
+#include <string>
+using namespace std;
+
 @implementation NSObject (FBAllocationTracker)
 
 + (id)fb_originalAlloc
@@ -34,7 +38,50 @@
 + (id)fb_newAlloc
 {
   id object = [self fb_originalAlloc];
-  FB::AllocationTracker::incrementAllocations(object);
+    
+    const char *clsname = object_getClassName(object);
+    string className = clsname;
+    size_t len = className.length();
+    
+    static map<string, bool> s_map;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        s_map[string("_")] = YES;
+        s_map[string("UI")] = YES;
+        s_map[string("NS")] = YES;
+        s_map[string("CF")] = YES;
+        s_map[string("CA")] = YES;
+        s_map[string("CPLRU")] = YES;
+        s_map[string("CSI")] = YES;
+        s_map[string("CT")] = YES;
+        s_map[string("CUI")] = YES;
+        s_map[string("BKS")] = YES;
+        s_map[string("BS")] = YES;
+        s_map[string("MC")] = YES;
+        s_map[string("GEO")] = YES;
+        s_map[string("GX")] = YES;
+        s_map[string("WK")] = YES;
+        s_map[string("AV")] = YES;
+        s_map[string("AF")] = YES;
+        s_map[string("BLY")] = YES;
+        s_map[string("CL")] = YES;
+        s_map[string("DD")] = YES;
+        s_map[string("AMap")] = YES;
+//        s_map[string("FB")] = YES;
+    });
+    
+    BOOL isSystemClass = NO;
+    for (NSInteger idx = 1; idx <= 5 && idx <= len; ++idx) {
+        string prefix = className.substr(0, idx);
+        auto found_it = s_map.find(prefix);
+        if (found_it != s_map.end()) {
+            isSystemClass = YES;
+            break;
+        }
+    }
+    if (isSystemClass == NO) {
+        FB::AllocationTracker::incrementAllocations(object);
+    }
   return object;
 }
 
